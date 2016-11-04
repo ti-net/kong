@@ -64,7 +64,7 @@ function _M.execute(conf)
   -- Trigger request
   local client = http.new()
   client:connect(host, 443)
-  client:set_timeout(60000)
+  client:set_timeout(conf.timeout)
   local ok, err = client:ssl_handshake()
   if not ok then
     return responses.send_HTTP_INTERNAL_SERVER_ERROR(err)

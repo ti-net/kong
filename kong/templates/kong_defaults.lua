@@ -18,6 +18,7 @@ ssl_cert_key = NONE
 admin_ssl = on
 admin_ssl_cert = NONE
 admin_ssl_cert_key = NONE
+upstream_keepalive = 60
 
 database = postgres
 pg_host = 127.0.0.1
@@ -49,9 +50,8 @@ cluster_encrypt_key = NONE
 cluster_profile = wan
 cluster_ttl_on_failure = 3600
 
-dnsmasq = on
-dnsmasq_port = 8053
 dns_resolver = NONE
+dns_hostsfile = /etc/hosts
 
 lua_code_cache = on
 lua_ssl_trusted_certificate = NONE

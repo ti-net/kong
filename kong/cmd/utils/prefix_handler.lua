@@ -168,9 +168,6 @@ local function compile_conf(kong_config, conf_template)
     tostring = tostring
   }
 
-  if kong_config.dnsmasq then
-    compile_env["dns_resolver"] = "127.0.0.1:"..kong_config.dnsmasq_port
-  end
   if kong_config.anonymous_reports and socket.dns.toip(constants.SYSLOG.ADDRESS) then
     compile_env["syslog_reports"] = fmt("error_log syslog:server=%s:%d error;",
                                         constants.SYSLOG.ADDRESS, constants.SYSLOG.PORT)
@@ -220,6 +217,8 @@ local function prepare_prefix(kong_config, nginx_custom_template_path)
   local ok, _, _, stderr = pl_utils.executeex("touch "..kong_config.nginx_err_logs)
   if not ok then return nil, stderr end
   local ok, _, _, stderr = pl_utils.executeex("touch "..kong_config.nginx_acc_logs)
+  if not ok then return nil, stderr end
+  local ok, _, _, stderr = pl_utils.executeex("touch "..kong_config.nginx_admin_acc_logs)
   if not ok then return nil, stderr end
 
   log.verbose("saving serf identifier to %s", kong_config.serf_node_id)

@@ -7,7 +7,10 @@ local pl_config = require "pl.config"
 local pl_file = require "pl.file"
 local pl_path = require "pl.path"
 local tablex = require "pl.tablex"
+local utils = require "kong.tools.utils"
 local log = require "kong.cmd.utils.log"
+
+local ipv4_port_pattern = "^(%d+)%.(%d+)%.(%d+)%.(%d+):(%d+)$"
 
 local DEFAULT_PATHS = {
   "/etc/kong/kong.conf",
@@ -15,8 +18,6 @@ local DEFAULT_PATHS = {
 }
 
 local PREFIX_PATHS = {
-  dnsmasq_pid = {"pids", "dnsmasq.pid"}
-  ;
   serf_pid = {"pids", "serf.pid"},
   serf_log = {"logs", "serf.log"},
   serf_event = {"serf", "serf_event.sh"},
@@ -25,6 +26,7 @@ local PREFIX_PATHS = {
   nginx_pid = {"pids", "nginx.pid"},
   nginx_err_logs = {"logs", "error.log"},
   nginx_acc_logs = {"logs", "access.log"},
+  nginx_admin_acc_logs = {"logs", "admin_access.log"},
   nginx_conf = {"nginx.conf"},
   nginx_kong_conf = {"nginx-kong.conf"}
   ;
@@ -60,6 +62,7 @@ local CONF_INFERENCES = {
   cluster_listen_rpc = {typ = "string"},
   cluster_advertise = {typ = "string"},
   nginx_worker_processes = {typ = "string"},
+  upstream_keepalive = {typ = "number"},
 
   database = {enum = {"postgres", "cassandra"}},
   pg_port = {typ = "number"},
@@ -82,8 +85,7 @@ local CONF_INFERENCES = {
   cluster_profile = {enum = {"local", "lan", "wan"}},
   cluster_ttl_on_failure = {typ = "number"},
 
-  dnsmasq = {typ = "boolean"},
-  dnsmasq_port = {typ = "number"},
+  dns_resolver = {typ = "array"},
 
   ssl = {typ = "boolean"},
   admin_ssl = {typ = "boolean"},
@@ -206,13 +208,16 @@ local function check_and_infer(conf)
     end
   end
 
-  if conf.dns_resolver and conf.dnsmasq then
-    errors[#errors+1] = "must disable dnsmasq when a custom DNS resolver is specified"
-  elseif not conf.dns_resolver and not conf.dnsmasq then
-    errors[#errors+1] = "must specify a custom DNS resolver when dnsmasq is turned off"
+  if conf.dns_resolver then
+    for _, server in ipairs(conf.dns_resolver) do
+      local dns = utils.normalize_ip(server)
+      if (not dns) or (dns.type ~= "ipv4") then
+        errors[#errors+1] = "dns_resolver must be a comma separated list in "..
+                            "the form of IPv4 or IPv4:port, got '"..server.."'"
+      end
+    end
   end
 
-  local ipv4_port_pattern = "^(%d+)%.(%d+)%.(%d+)%.(%d+):(%d+)$"
   if not conf.cluster_listen:match(ipv4_port_pattern) then
     errors[#errors+1] = "cluster_listen must be in the form of IPv4:port"
   end
@@ -409,6 +414,10 @@ local function load(path, custom_conf)
 
   log.verbose("prefix in use: %s", conf.prefix)
 
+  -- initialize the dns client, so the globally patched tcp.connect method
+  -- will work from here onwards.
+  assert(require("kong.tools.dns")(conf))
+  
   return setmetatable(conf, nil) -- remove Map mt
 end
 

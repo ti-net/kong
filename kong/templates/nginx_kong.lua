@@ -1,9 +1,7 @@
 return [[
-resolver ${{DNS_RESOLVER}} ipv6=off;
 charset UTF-8;
 
 error_log logs/error.log ${{LOG_LEVEL}};
-access_log logs/access.log;
 
 > if anonymous_reports then
 ${{SYSLOG_REPORTS}}
@@ -55,11 +53,23 @@ init_worker_by_lua_block {
     kong.init_worker()
 }
 
+proxy_next_upstream_tries 999;
+    
+upstream kong_upstream {
+    server 0.0.0.1;
+    balancer_by_lua_block {
+        kong.balancer()
+    }
+    keepalive ${{UPSTREAM_KEEPALIVE}};
+}
+
 server {
     server_name kong;
     listen ${{PROXY_LISTEN}};
     error_page 404 408 411 412 413 414 417 /kong_error_handler;
     error_page 500 502 503 504 /kong_error_handler;
+
+    access_log logs/access.log;
 
 > if ssl then
     listen ${{PROXY_LISTEN_SSL}} ssl;
@@ -110,6 +120,8 @@ server {
 server {
     server_name kong_admin;
     listen ${{ADMIN_LISTEN}};
+
+    access_log logs/admin_access.log;
 
     client_max_body_size 10m;
     client_body_buffer_size 10m;

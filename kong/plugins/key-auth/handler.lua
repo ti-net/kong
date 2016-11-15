@@ -8,6 +8,7 @@ local set_header = ngx.req.set_header
 local get_headers = ngx.req.get_headers
 local set_uri_args = ngx.req.set_uri_args
 local get_uri_args = ngx.req.get_uri_args
+local get_post_args = ngx.req.get_post_args
 local clear_header = ngx.req.clear_header
 local type = type
 
@@ -32,6 +33,8 @@ function KeyAuthHandler:access(conf)
   local key
   local headers = get_headers()
   local uri_args = get_uri_args()
+  local body = ngx.req.read_body()
+  local post_args = get_post_args()
 
   -- search in headers & querystring
   for i = 1, #conf.key_names do
@@ -40,6 +43,10 @@ function KeyAuthHandler:access(conf)
     if not v then
       -- search in querystring
       v = uri_args[name]
+    end
+    
+    if not v then
+      v = post_args[name]
     end
 
     if type(v) == "string" then

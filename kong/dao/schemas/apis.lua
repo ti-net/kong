@@ -87,9 +87,9 @@ local function check_request_path(request_path, api_t)
       -- Check for empty segments (/status//123)
       return false, fmt("invalid: '%s'", request_path)
     end
-    if not match(request_path, "^/[%w%.%-%_~%/%%]*$") then
+    if not match(request_path, "^/[%w%.%!%-%_~%/%%]*$") then
       -- Check if characters are in RFC 3986 unreserved list, and % for percent encoding
-      return false, "must only contain alphanumeric and '., -, _, ~, /, %' characters"
+      return false, "must only contain alphanumeric and '., -, _, !, ~, /, %' characters"
     end
     local esc = request_path:gsub("%%%x%x", "___") -- drop all proper %-encodings
     if match(esc, "%%") then

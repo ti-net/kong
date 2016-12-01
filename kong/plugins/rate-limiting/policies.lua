@@ -123,6 +123,8 @@ return {
           return
         end
       end
+      
+      local ok, err = red:select(15)
 
       local periods = timestamp.get_timestamps(current_timestamp)
       local cache_key = get_local_key(api_id, identifier, periods[name], name)
